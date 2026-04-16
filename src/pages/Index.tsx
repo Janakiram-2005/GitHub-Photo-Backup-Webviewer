@@ -169,6 +169,7 @@ export default function Index() {
                 onImageClick={handleImageClick} 
                 selectedImages={selectedImages}
                 onSelectImage={handleSelectImage}
+                config={config}
               />
             )}
           </>

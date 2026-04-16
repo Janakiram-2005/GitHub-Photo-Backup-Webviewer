@@ -1,6 +1,6 @@
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, ChevronLeft, ChevronRight, Download, ExternalLink } from 'lucide-react';
-import { formatFileSize, type GitHubFile, type GalleryConfig } from '@/lib/github-api';
+import { getImageUrl, formatFileSize, type GitHubFile, type GalleryConfig } from '@/lib/github-api';
 import { SecureImage } from './SecureImage';
 
 interface ImageModalProps {
