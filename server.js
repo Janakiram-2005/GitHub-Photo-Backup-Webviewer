@@ -92,7 +92,9 @@ async function start() {
 
     // Serve Frontend statically for the single-deployment
     app.use(express.static(path.join(__dirname, 'dist')));
-    app.get('*', (req, res) => {
+    
+    // Catch-all route to serve React index.html
+    app.use((req, res) => {
       res.sendFile(path.join(__dirname, 'dist/index.html'));
     });
 
