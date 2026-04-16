@@ -1,6 +1,7 @@
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, ChevronLeft, ChevronRight, Download, ExternalLink } from 'lucide-react';
-import { getImageUrl, formatFileSize, type GitHubFile } from '@/lib/github-api';
+import { formatFileSize, type GitHubFile, type GalleryConfig } from '@/lib/github-api';
+import { SecureImage } from './SecureImage';
 
 interface ImageModalProps {
   image: GitHubFile | null;
@@ -8,9 +9,10 @@ interface ImageModalProps {
   currentIndex: number;
   onClose: () => void;
   onNavigate: (index: number) => void;
+  config: GalleryConfig;
 }
 
-export function ImageModal({ image, images, currentIndex, onClose, onNavigate }: ImageModalProps) {
+export function ImageModal({ image, images, currentIndex, onClose, onNavigate, config }: ImageModalProps) {
   if (!image) return null;
 
   const hasPrev = currentIndex > 0;
@@ -55,8 +57,9 @@ export function ImageModal({ image, images, currentIndex, onClose, onNavigate }:
           className="max-w-[90vw] max-h-[80vh] flex flex-col items-center"
           onClick={(e) => e.stopPropagation()}
         >
-          <img
-            src={getImageUrl(image)}
+          <SecureImage
+            file={image}
+            config={config}
             alt={image.name}
             className="max-w-full max-h-[70vh] object-contain rounded-lg"
           />

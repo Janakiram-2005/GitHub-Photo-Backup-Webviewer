@@ -54,7 +54,12 @@ export default function Index() {
     // In a browser, rapid simultaneous downloads may be blocked or prompt user
     for (const image of selectedImages) {
       try {
-        const response = await fetch(getImageUrl(image));
+        const auth = config.token ? { 'Authorization': `Bearer ${config.token}` } : {};
+        const fetchUrl = `https://api.github.com/repos/${config.owner}/${config.repo}/contents/${encodeURIComponent(image.path)}`;
+        const response = await fetch(fetchUrl, { headers: { ...auth, 'Accept': 'application/vnd.github.v3.raw' }});
+        
+        if (!response.ok) throw new Error('Download request failed');
+
         const blob = await response.blob();
         const url = window.URL.createObjectURL(blob);
         const a = document.createElement('a');
@@ -195,6 +200,7 @@ export default function Index() {
         currentIndex={modalIndex}
         onClose={() => setModalImage(null)}
         onNavigate={handleNavigate}
+        config={config}
       />
 
       <SettingsDialog

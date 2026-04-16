@@ -1,16 +1,18 @@
 import { motion } from 'framer-motion';
 import { useRef } from 'react';
-import { getImageUrl, formatFileSize, type GitHubFile } from '@/lib/github-api';
+import { formatFileSize, type GitHubFile, type GalleryConfig } from '@/lib/github-api';
 import { Check } from 'lucide-react';
+import { SecureImage } from './SecureImage';
 
 interface ImageGridProps {
   images: GitHubFile[];
   onImageClick: (image: GitHubFile, index: number) => void;
   selectedImages: GitHubFile[];
   onSelectImage: (image: GitHubFile) => void;
+  config: GalleryConfig;
 }
 
-export function ImageGrid({ images, onImageClick, selectedImages, onSelectImage }: ImageGridProps) {
+export function ImageGrid({ images, onImageClick, selectedImages, onSelectImage, config }: ImageGridProps) {
   const isSelectMode = selectedImages.length > 0;
 
   return (
@@ -24,6 +26,7 @@ export function ImageGrid({ images, onImageClick, selectedImages, onSelectImage 
           isSelected={selectedImages.some(img => img.sha === image.sha)}
           onImageClick={onImageClick}
           onSelectImage={onSelectImage}
+          config={config}
         />
       ))}
     </div>
@@ -37,9 +40,10 @@ interface ImageGridItemProps {
   isSelectMode: boolean;
   onImageClick: (image: GitHubFile, index: number) => void;
   onSelectImage: (image: GitHubFile) => void;
+  config: GalleryConfig;
 }
 
-function ImageGridItem({ image, index, isSelected, isSelectMode, onImageClick, onSelectImage }: ImageGridItemProps) {
+function ImageGridItem({ image, index, isSelected, isSelectMode, onImageClick, onSelectImage, config }: ImageGridItemProps) {
   const timerRef = useRef<NodeJS.Timeout>();
 
   const handlePointerDown = () => {
@@ -80,13 +84,11 @@ function ImageGridItem({ image, index, isSelected, isSelectMode, onImageClick, o
           <Check className="w-4 h-4" />
         </div>
       )}
-      <img
-        src={getImageUrl(image)}
+      <SecureImage
+        file={image}
+        config={config}
         alt={image.name}
         className={`w-full h-full object-cover transition-transform duration-300 ${isSelected ? 'scale-105' : 'group-hover:scale-105'}`}
-        loading="lazy"
-        crossOrigin="anonymous"
-        referrerPolicy="no-referrer"
       />
       <div className={`absolute inset-0 transition-colors ${isSelected ? 'bg-background/20' : 'bg-background/0 group-hover:bg-background/40'}`} />
       <div className={`absolute bottom-0 left-0 right-0 p-2 transition-opacity ${isSelected ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}>
