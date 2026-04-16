@@ -23,26 +23,21 @@ const AuthContext = createContext<AuthContextType | null>(null);
 const SESSION_KEY = 'photo-sync-session';
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<User | null>(null);
-
-  // Load active session from local storage on mount
-  useEffect(() => {
+  const [user, setUser] = useState<User | null>(() => {
     try {
-      const storedSession = localStorage.getItem(SESSION_KEY);
-      if (storedSession) {
-        setUser(JSON.parse(storedSession));
-      }
-    } catch (e) {
-      console.error('Error loading session', e);
+      const storedSession = sessionStorage.getItem(SESSION_KEY);
+      return storedSession ? JSON.parse(storedSession) : null;
+    } catch {
+      return null;
     }
-  }, []);
+  });
 
   // Update session when active user changes
   useEffect(() => {
     if (user) {
-      localStorage.setItem(SESSION_KEY, JSON.stringify(user));
+      sessionStorage.setItem(SESSION_KEY, JSON.stringify(user));
     } else {
-      localStorage.removeItem(SESSION_KEY);
+      sessionStorage.removeItem(SESSION_KEY);
     }
   }, [user]);
 
