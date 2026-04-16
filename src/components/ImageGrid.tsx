@@ -85,6 +85,8 @@ function ImageGridItem({ image, index, isSelected, isSelectMode, onImageClick, o
         alt={image.name}
         className={`w-full h-full object-cover transition-transform duration-300 ${isSelected ? 'scale-105' : 'group-hover:scale-105'}`}
         loading="lazy"
+        crossOrigin="anonymous"
+        referrerPolicy="no-referrer"
       />
       <div className={`absolute inset-0 transition-colors ${isSelected ? 'bg-background/20' : 'bg-background/0 group-hover:bg-background/40'}`} />
       <div className={`absolute bottom-0 left-0 right-0 p-2 transition-opacity ${isSelected ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}>
