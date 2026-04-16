@@ -45,7 +45,7 @@ async function start() {
       await users.insertOne(newUser);
       
       // Don't send MongoDB internal _id field back
-      const { _id, ...safeUser } = newUser as any;
+      const { _id, ...safeUser } = newUser;
       res.json({ success: true, user: safeUser });
     });
 
@@ -55,7 +55,7 @@ async function start() {
       const user = await users.findOne({ email, pin });
       
       if (user) {
-         const { _id, ...safeUser } = user as any;
+         const { _id, ...safeUser } = user;
          res.json({ success: true, user: safeUser });
       } else {
          res.status(401).json({ success: false, error: 'Invalid credentials' });
