@@ -1,11 +1,14 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { GalleryHeader } from '@/components/GalleryHeader';
 import { AlbumGrid } from '@/components/AlbumGrid';
 import { ImageGrid } from '@/components/ImageGrid';
 import { ImageModal } from '@/components/ImageModal';
 import { SettingsDialog } from '@/components/SettingsDialog';
 import { EmptyState } from '@/components/EmptyState';
-import { fetchAlbums, type AlbumData, type GalleryConfig, type GitHubFile, getImageUrl } from '@/lib/github-api';
+import { fetchAlbums, uploadFileToGitHub, fileToBase64, type AlbumData, type GalleryConfig, type GitHubFile, getImageUrl } from '@/lib/github-api';
+import { generateUniquePath } from '@/lib/upload-utils';
+import { cleanOldLogs, logActivity } from '@/lib/logger';
+import { Progress } from '@/components/ui/progress';
 import { ArrowLeft, Loader2, AlertTriangle, Download, X } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -31,6 +34,10 @@ export default function Index() {
   const [modalImage, setModalImage] = useState<GitHubFile | null>(null);
   const [modalIndex, setModalIndex] = useState(0);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState({ current: 0, total: 0, filename: '' });
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const folderInputRef = useRef<HTMLInputElement>(null);
 
   const [selectedImages, setSelectedImages] = useState<GitHubFile[]>([]);
 
@@ -97,6 +104,7 @@ export default function Index() {
   }, [config]);
 
   useEffect(() => {
+    cleanOldLogs();
     if (config.owner && config.repo) loadGallery();
   }, [config, loadGallery]);
 
@@ -116,14 +124,105 @@ export default function Index() {
     setModalIndex(index);
   };
 
+  const handleUploadClick = () => {
+    if (!config.owner || !config.repo || !config.token) {
+      toast.error('Please configure your GitHub repository and token first');
+      setSettingsOpen(true);
+      return;
+    }
+    fileInputRef.current?.click();
+  };
+
+  const handleUploadFolderClick = () => {
+    if (!config.owner || !config.repo || !config.token) {
+      toast.error('Please configure your GitHub repository and token first');
+      setSettingsOpen(true);
+      return;
+    }
+    folderInputRef.current?.click();
+  };
+
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+
+    setIsUploading(true);
+    setUploadProgress({ current: 0, total: files.length, filename: '' });
+    toast.info(`Uploading ${files.length} file(s)...`);
+    logActivity(`Started uploading ${files.length} file(s)`);
+
+    let successCount = 0;
+    for (let i = 0; i < files.length; i++) {
+      const file = files[i];
+      setUploadProgress(prev => ({ ...prev, current: i + 1, filename: file.name }));
+      try {
+        const base64Content = await fileToBase64(file);
+        
+        let pathPrefix = selectedAlbum && selectedAlbum.path ? `${selectedAlbum.path}/` : '';
+        let fileName = file.name;
+
+        // Support folder upload structures
+        if (file.webkitRelativePath) {
+          // webkitRelativePath is usually "FolderName/SubFolder/image.jpg"
+          // We can remove the top-level folder name if we are uploading INTO an album, 
+          // or keep it if uploading to Root. Let's keep the full relative path to preserve structure.
+          fileName = file.webkitRelativePath;
+        }
+
+        const desiredPath = `${pathPrefix}${fileName}`;
+        const uniquePath = generateUniquePath(desiredPath, allImages);
+        
+        await uploadFileToGitHub(config, uniquePath, base64Content, `Upload ${uniquePath}`);
+        successCount++;
+        logActivity(`Uploaded ${uniquePath}`);
+        
+        if (uniquePath !== desiredPath) {
+          logActivity(`Auto-renamed duplicate ${desiredPath} to ${uniquePath}`);
+        }
+      } catch (err: any) {
+        toast.error(`Failed to upload ${file.name}: ${err.message}`);
+        logActivity(`Error uploading ${file.name}: ${err.message}`);
+      }
+    }
+
+    setIsUploading(false);
+    if (fileInputRef.current) fileInputRef.current.value = '';
+    if (folderInputRef.current) folderInputRef.current.value = '';
+    
+    if (successCount > 0) {
+      toast.success(`Successfully uploaded ${successCount} file(s)`);
+      logActivity(`Upload batch completed with ${successCount} successes.`);
+      loadGallery(); // Refresh the gallery
+    }
+  };
+
   const isConfigured = config.owner && config.repo;
 
   return (
     <div className="min-h-screen bg-background">
+      <input 
+        type="file" 
+        multiple 
+        accept="image/*" 
+        className="hidden" 
+        ref={fileInputRef} 
+        onChange={handleFileChange} 
+      />
+      <input 
+        type="file" 
+        multiple 
+        {...({ webkitdirectory: "" } as any)} 
+        className="hidden" 
+        ref={folderInputRef} 
+        onChange={handleFileChange} 
+      />
+      
       <GalleryHeader
         view={view}
         onViewChange={setView}
         onSettingsClick={() => setSettingsOpen(true)}
+        onUploadClick={handleUploadClick}
+        onUploadFolderClick={handleUploadFolderClick}
         imageCount={allImages.length}
         albumCount={albums.length}
       />
@@ -131,13 +230,24 @@ export default function Index() {
       <main className="container mx-auto px-4 py-6">
         {!isConfigured && <EmptyState onSettingsClick={() => setSettingsOpen(true)} />}
 
-        {isConfigured && loading && (
-          <div className="flex items-center justify-center min-h-[50vh]">
-            <Loader2 className="w-8 h-8 text-primary animate-spin" />
+        {isConfigured && (loading || isUploading) && (
+          <div className="flex flex-col items-center justify-center min-h-[50vh]">
+            {loading && !isUploading && <Loader2 className="w-8 h-8 text-primary animate-spin mb-4" />}
+            
+            {isUploading && (
+              <div className="w-full max-w-md bg-card p-6 rounded-xl border border-border shadow-lg">
+                <h3 className="text-sm font-semibold mb-2">Uploading Files...</h3>
+                <Progress value={(uploadProgress.current / uploadProgress.total) * 100} className="h-2 mb-3" />
+                <div className="flex justify-between text-xs text-muted-foreground">
+                  <span>{uploadProgress.current} of {uploadProgress.total}</span>
+                  <span className="truncate max-w-[200px] ml-4">{uploadProgress.filename}</span>
+                </div>
+              </div>
+            )}
           </div>
         )}
 
-        {isConfigured && error && (
+        {isConfigured && error && !isUploading && (
           <div className="flex flex-col items-center justify-center min-h-[50vh] text-center">
             <AlertTriangle className="w-10 h-10 text-destructive mb-3" />
             <p className="text-foreground font-medium">{error}</p>
@@ -147,7 +257,7 @@ export default function Index() {
           </div>
         )}
 
-        {isConfigured && !loading && !error && (
+        {isConfigured && !loading && !error && !isUploading && (
           <>
             {selectedAlbum && (
               <button

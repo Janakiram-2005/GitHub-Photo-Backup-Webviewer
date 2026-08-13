@@ -94,3 +94,53 @@ export function formatFileSize(bytes: number): string {
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
+
+export async function uploadFileToGitHub(
+  config: GalleryConfig,
+  path: string,
+  base64Content: string,
+  message: string
+): Promise<any> {
+  const { owner, repo, token, branch } = config;
+  const url = `${GITHUB_API}/repos/${owner}/${repo}/contents/${path}`;
+  
+  const body = {
+    message,
+    content: base64Content,
+    ...(branch ? { branch } : {})
+  };
+
+  const headers: Record<string, string> = {
+    Accept: 'application/vnd.github.v3+json',
+    'Content-Type': 'application/json',
+  };
+  if (token) headers.Authorization = `Bearer ${token}`;
+
+  const res = await fetch(url, {
+    method: 'PUT',
+    headers,
+    body: JSON.stringify(body)
+  });
+  
+  if (!res.ok) {
+    const errorData = await res.json().catch(() => ({}));
+    throw new Error(`GitHub API error: ${res.status} ${errorData.message || ''}`);
+  }
+  return res.json();
+}
+
+export function fileToBase64(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.readAsDataURL(file);
+    reader.onload = () => {
+      // Remove data URL scheme prefix (e.g., "data:image/jpeg;base64,")
+      let encoded = reader.result?.toString().replace(/^data:(.*,)?/, '') || '';
+      if ((encoded.length % 4) > 0) {
+        encoded += '='.repeat(4 - (encoded.length % 4));
+      }
+      resolve(encoded);
+    };
+    reader.onerror = error => reject(error);
+  });
+}

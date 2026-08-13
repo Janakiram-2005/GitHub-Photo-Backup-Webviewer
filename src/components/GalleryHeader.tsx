@@ -1,16 +1,24 @@
-import { Camera, GitBranch, Grid, Clock, Settings, LogOut } from 'lucide-react';
+import { Camera, GitBranch, Grid, Clock, Settings, LogOut, Upload, FileImage, FolderUp } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { ThemeToggle } from '@/components/ThemeToggle';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 interface GalleryHeaderProps {
   view: 'albums' | 'timeline';
   onViewChange: (view: 'albums' | 'timeline') => void;
   onSettingsClick: () => void;
+  onUploadClick: () => void;
+  onUploadFolderClick: () => void;
   imageCount: number;
   albumCount: number;
 }
 
-export function GalleryHeader({ view, onViewChange, onSettingsClick, imageCount, albumCount }: GalleryHeaderProps) {
+export function GalleryHeader({ view, onViewChange, onSettingsClick, onUploadClick, onUploadFolderClick, imageCount, albumCount }: GalleryHeaderProps) {
   const { logout } = useAuth();
   
   return (
@@ -53,6 +61,28 @@ export function GalleryHeader({ view, onViewChange, onSettingsClick, imageCount,
               Timeline
             </button>
           </div>
+          
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button
+                className="p-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+                title="Upload"
+              >
+                <Upload className="w-5 h-5" />
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={onUploadClick} className="cursor-pointer">
+                <FileImage className="w-4 h-4 mr-2" />
+                Upload Photos
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={onUploadFolderClick} className="cursor-pointer">
+                <FolderUp className="w-4 h-4 mr-2" />
+                Upload Folder
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+
           <button
             onClick={onSettingsClick}
             className="p-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"

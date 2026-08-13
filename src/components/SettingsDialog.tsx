@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Key, GitBranch, User, BookOpen } from 'lucide-react';
+import { X, Key, GitBranch, User, BookOpen, Download } from 'lucide-react';
 import type { GalleryConfig } from '@/lib/github-api';
+import { downloadLogs } from '@/lib/logger';
 
 interface SettingsDialogProps {
   open: boolean;
@@ -91,6 +92,18 @@ export function SettingsDialog({ open, onClose, config, onSave }: SettingsDialog
                   className="w-full px-3 py-2 rounded-lg bg-muted border border-border text-foreground placeholder:text-muted-foreground font-mono text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
                 />
               </div>
+            </div>
+            
+            <div className="mt-6 border-t border-border pt-4">
+              <h3 className="text-sm font-medium text-foreground flex items-center gap-2 mb-3">
+                <BookOpen className="w-4 h-4 text-primary" /> System Logs
+              </h3>
+              <button
+                onClick={() => { downloadLogs(); onClose(); }}
+                className="w-full flex items-center justify-center gap-2 py-2 rounded-lg bg-secondary text-secondary-foreground border border-border hover:bg-muted transition-colors text-sm font-medium"
+              >
+                <Download className="w-4 h-4" /> Download Today's Log
+              </button>
             </div>
 
             <button
