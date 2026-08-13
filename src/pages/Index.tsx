@@ -11,6 +11,7 @@ import { cleanOldLogs, logActivity } from '@/lib/logger';
 import { Progress } from '@/components/ui/progress';
 import { ArrowLeft, Loader2, AlertTriangle, Download, X } from 'lucide-react';
 import { toast } from 'sonner';
+import { useSearchParams } from 'react-router-dom';
 
 const STORAGE_KEY = 'github-gallery-config';
 
@@ -30,7 +31,11 @@ export default function Index() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [view, setView] = useState<'albums' | 'timeline'>('albums');
-  const [selectedAlbum, setSelectedAlbum] = useState<AlbumData | null>(null);
+  const [searchParams, setSearchParams] = useSearchParams();
+  
+  const albumParam = searchParams.get('album');
+  const selectedAlbum = albums.find(a => a.path === albumParam) || null;
+
   const [modalImage, setModalImage] = useState<GitHubFile | null>(null);
   const [modalIndex, setModalIndex] = useState(0);
   const [settingsOpen, setSettingsOpen] = useState(false);
@@ -108,10 +113,22 @@ export default function Index() {
     if (config.owner && config.repo) loadGallery();
   }, [config, loadGallery]);
 
+  const handleAlbumClick = (album: AlbumData) => {
+    const newParams = new URLSearchParams(searchParams);
+    newParams.set('album', album.path);
+    setSearchParams(newParams);
+  };
+
+  const handleBackToAlbums = () => {
+    const newParams = new URLSearchParams(searchParams);
+    newParams.delete('album');
+    setSearchParams(newParams);
+  };
+
   const handleSaveConfig = (newConfig: GalleryConfig) => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(newConfig));
     setConfig(newConfig);
-    setSelectedAlbum(null);
+    handleBackToAlbums();
   };
 
   const handleImageClick = (image: GitHubFile, index: number) => {
@@ -261,7 +278,7 @@ export default function Index() {
           <>
             {selectedAlbum && (
               <button
-                onClick={() => setSelectedAlbum(null)}
+                onClick={handleBackToAlbums}
                 className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground mb-4 transition-colors"
               >
                 <ArrowLeft className="w-4 h-4" />
@@ -270,7 +287,7 @@ export default function Index() {
             )}
 
             {view === 'albums' && !selectedAlbum && (
-              <AlbumGrid albums={albums} onAlbumClick={setSelectedAlbum} />
+              <AlbumGrid albums={albums} onAlbumClick={handleAlbumClick} />
             )}
 
             {(view === 'timeline' || selectedAlbum) && (
